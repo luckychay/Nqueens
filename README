@@ -1,4 +1,4 @@
-                                **C++ implementation of GA for n-queens problem**
+                                # **C++ implementation of GA for n-queens problem**
 Simply run the NQueens.exe in Windows Powershell or linux terminal, then input the numberof queens you want.
 
 During running time, the program will print generation number and fitness score. When the fitness score reaches 0, the solution is found. 
