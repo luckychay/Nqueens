@@ -1,13 +1,10 @@
 /*
- * @Description: 
+ * @Description: Solver for n-queens problem using island Genetic Algorithm
  * @Version: 
  * @Author: Xuanying Chen
  * @Date: 2022-02-05 10:39:54
- * @LastEditTime: 2022-02-14 20:07:42
+ * @LastEditTime: 2022-02-15 16:48:52
  */
-
-// C++ program to create target string, starting from
-// random string using Genetic Algorithm
 
 #include <numeric>
 #include <windows.h>
@@ -33,7 +30,7 @@ vector<int> generate_genes(int N)
     return GENES;
 }
 
-// create chromosome or permutation of genes
+// Create chromosome or permutation of genes
 vector<int> create_gnome(vector<int> GENES)
 {
     vector<int> gnome = GENES;
@@ -41,7 +38,7 @@ vector<int> create_gnome(vector<int> GENES)
     return gnome;
 }
 
-//Initial Population
+// Initial Population
 vector<Individual> create_individuals(vector<int> GENES)
 {
     vector<Individual> individuals;
@@ -54,6 +51,7 @@ vector<Individual> create_individuals(vector<int> GENES)
     return individuals;
 }
 
+// Calculate overall fitness of the islands
 int calculate_all_fit(vector<Population> islands)
 {
     int sum = 0;
@@ -62,15 +60,6 @@ int calculate_all_fit(vector<Population> islands)
         sum += islands[i].cal_fitness();
     }
     return sum;
-}
-
-// random swap for mutation
-void mutated_chromosome(vector<int> &chromosome)
-{
-    int len = chromosome.size();
-    int r = random_num(0, len-1);
-    int l = random_num(0, len-1);
-    swap(chromosome[r],chromosome[l]);
 }
 
 void draw_solution(vector<int> solution)
@@ -87,7 +76,8 @@ void draw_solution(vector<int> solution)
         cout << endl;
     }  
 }
-
+// compare wheather two circular linked list has the same permutation if 
+// the start point can be anywhere  
 bool compare(LinkedList a, LinkedList b)
 {
     Node* bh = b.find(a.head->next->data);
@@ -102,27 +92,7 @@ bool compare(LinkedList a, LinkedList b)
         bh = bh->next;
     }
 
-    if(p==a.head)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-// overloading << operator
-template <typename T> 
-ostream& operator<<(ostream& out, vector<T>& v)
-{
-    if (!v.empty()) {
-        out << '[';
-        copy(v.begin(), v.end()-1, ostream_iterator<T>(out, ", "));
-        copy(v.end()-1,v.end(),ostream_iterator<T>(out, ""));
-        out << "]";
-    }
-    return out;
+    return p==a.head?true:false;
 }
 
 // Driver code
@@ -166,16 +136,11 @@ int main()
             break;
         }
 
-        if(tmp==all_fitness)
-        {
-            fit_count++;
-        }
-        else
-        {
-            fit_count = 0;
-        }
+        // watch the overall fitness
+        tmp==all_fitness?fit_count++:fit_count = 0;
 
-        // migrating every epoch
+        // migrating every epoch, the number of exchanged individuals 
+        // is defined by MIGRATION_SIZE
         if(generation && (generation % MIGRATION_INTERVAL == 0))
         {
             for(int i=0; i<ISLAND_NUM; ++i)
@@ -183,14 +148,7 @@ int main()
                 for(int j=0; j<MIGRATION_SIZE; ++j)
                 {
                     int r = random_num(0,POPULATION_SIZE-1);
-                    if(i==ISLAND_NUM-1)
-                    {
-                        swap(islands[i].individuals[r],islands[0].individuals[r]); 
-                    }
-                    else
-                    {
-                        swap(islands[i].individuals[r],islands[i+1].individuals[r]); 
-                    }
+                    swap(islands[i].individuals[r],islands[(i+1)%ISLAND_NUM].individuals[r]); 
                 }
                 
             }
@@ -219,16 +177,36 @@ int main()
                 sort(parents.begin(),parents.end());
                 Individual parent1 = parents[0];
                 Individual parent2 = parents[1];
-                vector<Individual> offsprings = parent1.mate(parent2);
+                vector<Individual> offsprings = parent1.order1_crossover(parent2);
 
                 // Perform survivor selection
                 for(int j=0;j < offsprings.size();++j)
                 {
+                    // cout <<"after crossover: " << offsprings[j].chromosome << endl;
                     // 80% offspring mutation probability, mutation is a necessity
                     float p = random_num(0, 100)/100;
                     if(p <= MUTATION_RATE)
                     {   
-                        mutated_chromosome(offsprings[j].chromosome);
+                        // choose mutation methods randomly
+                        switch (rand()%4)
+                        {
+                            case 0:
+                                offsprings[j].swap_mutation();
+                                break;
+                                
+                            case 1:
+                                offsprings[j].insert_mutation();
+                                break;
+                                
+                            case 2:
+                                offsprings[j].scramble_mutation();
+                                break;
+                                
+                            case 3:    
+                                offsprings[j].inversion_mutation();
+                                break;
+                                
+                        }
                         offsprings[j].fitness = offsprings[j].cal_fitness();
                     }
 
@@ -246,6 +224,7 @@ int main()
                     // replace the worst one directly
                     // population[POPULATION_SIZE-1] = offsprings[j];
                     // sort(population.begin(), population.end());
+                    
                     *pop = population;
                 }
             }
@@ -274,47 +253,50 @@ int main()
     ofstream res;
     res.open(to_string(N)+"_queens_solutions.txt");
 
+    // save and put all the solutions into circular linked lists
     for(auto sol:solutions)
     {
-        LinkedList l;
-        for(int i=0;i<sol.size();++i)
-        {
-            l.insert(sol[i]);
-        }
-        linkedSolutions.push_back(l);
+        // LinkedList l;
+        // for(int i=0;i<sol.size();++i)
+        // {
+        //     l.insert(sol[i]);
+        // }
+        // linkedSolutions.push_back(l);
         res << sol << endl;
     }
     res.close();
 
-    for(int i=0; i<linkedSolutions.size();++i)
-    {
-        for(int j=i+1; j<linkedSolutions.size();++j)
-        {
-            if(compare(linkedSolutions[i],linkedSolutions[j]))
-            {
-                // TODO: pointer memory management
-                linkedSolutions.erase(linkedSolutions.begin()+j);                
-            }
-        }
-    }
-    ofstream uni_res;
-    uni_res.open(to_string(N)+"_queens_unique_solutions.txt");
-    for(auto i:linkedSolutions)
-    {
-        vector tmp = i.to_vector();
-        uni_res << tmp <<endl;
-    }
-    uni_res.close();
+    // // Only can remove duplicate solutions
+    // // such as {1, 3, 5, 2, 4} and {2, 4, 1, 3, 5}
+    // for(int i=0; i<linkedSolutions.size();++i)
+    // {
+    //     for(int j=i+1; j<linkedSolutions.size();++j)
+    //     {
+    //         if(compare(linkedSolutions[i],linkedSolutions[j]))
+    //         {
+    //             // TODO: pointer memory management
+    //             linkedSolutions.erase(linkedSolutions.begin()+j--);                
+    //         }
+    //     }
+    // }
+    // // Save unique solutions into file
+    // ofstream uni_res;
+    // uni_res.open(to_string(N)+"_queens_unique_solutions.txt");
+    // for(auto i:linkedSolutions)
+    // {
+    //     vector tmp = i.to_vector();
+    //     uni_res << tmp <<endl;
+    // }
+    // uni_res.close();
 
     if(solutions.size())
     {   
-        // 
         printf("In total %d solutions found within %dms for the %d queens problem.",
-                linkedSolutions.size(),en-be,N); 
+               solutions.size(),en-be,N); 
     }
     else
     {
-        cout << "No solution found!" << endl;
+        printf("No solution found!");
     }
 
     return 0;
